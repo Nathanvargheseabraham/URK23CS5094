@@ -1,0 +1,205 @@
+package user;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+
+public class HospitalManagementSystem extends JFrame {
+
+
+   private static final String URL = "jdbc:mysql://localhost:3306/hospital_db";
+   private static final String USER = "root"; // change this to your MySQL user
+   private static final String PASSWORD = "MYSQL"; // change this to your password
+
+   public static Connection getConnection() throws SQLException {
+       return DriverManager.getConnection(URL, USER, PASSWORD);
+   }
+
+    public HospitalManagementSystem() {
+        setTitle("🏥 Wellness Center");
+        setSize(400, 300);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setResizable(false);
+
+        JPanel panel = new JPanel(new GridLayout(5, 1, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel title = new JLabel("Wellness Center", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(title);
+
+        JButton btnPatient = new JButton("Register Patient");
+        JButton btnDoctor = new JButton("Register Doctor");
+        JButton btnAppointment = new JButton("Book Appointment");
+        JButton btnViewAppointments = new JButton("View Appointments");
+
+        panel.add(btnPatient);
+        panel.add(btnDoctor);
+        panel.add(btnAppointment);
+        panel.add(btnViewAppointments);
+
+        add(panel);
+        setVisible(true);
+
+        btnPatient.addActionListener(e -> openPatientForm());
+        btnDoctor.addActionListener(e -> openDoctorForm());
+        btnAppointment.addActionListener(e -> openAppointmentForm());
+        btnViewAppointments.addActionListener(e -> showAppointments());
+    }
+
+    private void openPatientForm() {
+        JFrame form = new JFrame("Patient Registration");
+        form.setSize(300, 250);
+        form.setLayout(new GridLayout(5, 2, 5, 5));
+        form.setLocationRelativeTo(null);
+
+        JTextField name = new JTextField();
+        JTextField age = new JTextField();
+        JTextField disease = new JTextField();
+
+        form.add(new JLabel("Name:"));
+        form.add(name);
+        form.add(new JLabel("Age:"));
+        form.add(age);
+        form.add(new JLabel("Disease:"));
+        form.add(disease);
+
+        JButton register = new JButton("Register");
+        form.add(new JLabel());
+        form.add(register);
+
+        register.addActionListener(e -> {
+            try (Connection conn = DBUtil.getConnection()) {
+                String sql = "INSERT INTO patients (name, age, disease) VALUES (?, ?, ?)";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setString(1, name.getText());
+                ps.setInt(2, Integer.parseInt(age.getText()));
+                ps.setString(3, disease.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(form, "Patient Registered!");
+                form.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(form, "Error: " + ex.getMessage());
+            }
+        });
+
+        form.setVisible(true);
+    }
+
+    private void openDoctorForm() {
+        JFrame form = new JFrame("Doctor Registration");
+        form.setSize(300, 250);
+        form.setLayout(new GridLayout(5, 2, 5, 5));
+        form.setLocationRelativeTo(null);
+
+        JTextField name = new JTextField();
+        JTextField specialization = new JTextField();
+
+        form.add(new JLabel("Name:"));
+        form.add(name);
+        form.add(new JLabel("Specialization:"));
+        form.add(specialization);
+
+        JButton register = new JButton("Register");
+        form.add(new JLabel());
+        form.add(register);
+
+        register.addActionListener(e -> {
+            try (Connection conn = DBUtil.getConnection()) {
+                String sql = "INSERT INTO doctors (name, specialization) VALUES (?, ?)";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setString(1, name.getText());
+                ps.setString(2, specialization.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(form, "Doctor Registered!");
+                form.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(form, "Error: " + ex.getMessage());
+            }
+        });
+
+        form.setVisible(true);
+    }
+
+    private void openAppointmentForm() {
+        JFrame form = new JFrame("Book Appointment");
+        form.setSize(300, 250);
+        form.setLayout(new GridLayout(5, 2, 5, 5));
+        form.setLocationRelativeTo(null);
+
+        JTextField patientName = new JTextField();
+        JTextField doctorName = new JTextField();
+        JTextField date = new JTextField();
+
+        form.add(new JLabel("Patient Name:"));
+        form.add(patientName);
+        form.add(new JLabel("Doctor Name:"));
+        form.add(doctorName);
+        form.add(new JLabel("Date:"));
+        form.add(date);
+
+        JButton book = new JButton("Book");
+        form.add(new JLabel());
+        form.add(book);
+
+        book.addActionListener(e -> {
+            try (Connection conn = DBUtil.getConnection()) {
+                String sql = "INSERT INTO appointments (patient_name, doctor_name, date) VALUES (?, ?, ?)";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                ps.setString(1, patientName.getText());
+                ps.setString(2, doctorName.getText());
+                ps.setString(3, date.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(form, "Appointment Booked!");
+                form.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(form, "Error: " + ex.getMessage());
+            }
+        });
+
+        form.setVisible(true);
+    }
+
+    private void showAppointments() {
+        JTextArea area = new JTextArea(15, 40);
+        area.setText("");
+
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            area.append("Patients:\n");
+            ResultSet rs = stmt.executeQuery("SELECT * FROM patients");
+            while (rs.next()) {
+                area.append("Name: " + rs.getString("name") + ", Age: " + rs.getInt("age") +
+                            ", Disease: " + rs.getString("disease") + "\n");
+            }
+
+            area.append("\nDoctors:\n");
+            rs = stmt.executeQuery("SELECT * FROM doctors");
+            while (rs.next()) {
+                area.append("Name: " + rs.getString("name") + ", Specialization: " +
+                            rs.getString("specialization") + "\n");
+            }
+
+            area.append("\nAppointments:\n");
+            rs = stmt.executeQuery("SELECT * FROM appointments");
+            while (rs.next()) {
+                area.append("Patient: " + rs.getString("patient_name") + ", Doctor: " +
+                            rs.getString("doctor_name") + ", Date: " + rs.getString("date") + "\n");
+            }
+
+           
+        } catch (SQLException ex) {
+            area.setText("Error fetching data: " + ex.getMessage());
+        }
+
+        JScrollPane scrollPane = new JScrollPane(area);
+        JOptionPane.showMessageDialog(this, scrollPane, "Database Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(HospitalManagementSystem::new);
+    }
+}
