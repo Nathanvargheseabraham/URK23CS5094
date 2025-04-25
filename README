@@ -196,3 +196,111 @@ View All Records: Display lists of registered patients, doctors, and appointment
 Database Integration: MySQL used for data persistence.
 
 Modular Design: Each function (patient, doctor, appointment) is managed through separate forms.
+
+code-
+package user;
+
+import javax.swing.*;
+import java.awt.*;
+import java.sql.*;
+
+public class HospitalManagementSystem extends JFrame {
+
+    static final String URL = "jdbc:mysql://localhost:3306/hospital_db";
+    static final String USER = "root", PASSWORD = "MYSQL";
+
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    public HospitalManagementSystem() {
+        setTitle("🏥 Wellness Center");
+        setSize(400, 300);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setResizable(false);
+
+        JPanel panel = new JPanel(new GridLayout(5, 1, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.add(new JLabel("Wellness Center", SwingConstants.CENTER));
+
+        String[] actions = {"Register Patient", "Register Doctor", "Book Appointment", "View Appointments"};
+        for (String action : actions) {
+            JButton btn = new JButton(action);
+            panel.add(btn);
+            btn.addActionListener(e -> handleAction(action));
+        }
+
+        add(panel);
+        setVisible(true);
+    }
+
+    private void handleAction(String action) {
+        switch (action) {
+            case "Register Patient" -> openForm("patients", new String[]{"Name", "Age", "Disease"});
+            case "Register Doctor" -> openForm("doctors", new String[]{"Name", "Specialization"});
+            case "Book Appointment" -> openForm("appointments", new String[]{"Patient Name", "Doctor Name", "Date"});
+            case "View Appointments" -> showAppointments();
+        }
+    }
+
+    private void openForm(String table, String[] fields) {
+        JFrame form = new JFrame("Add to " + table);
+        form.setSize(300, 250);
+        form.setLayout(new GridLayout(fields.length + 1, 2, 5, 5));
+        JTextField[] inputs = new JTextField[fields.length];
+
+        for (int i = 0; i < fields.length; i++) {
+            form.add(new JLabel(fields[i] + ":"));
+            inputs[i] = new JTextField();
+            form.add(inputs[i]);
+        }
+
+        JButton submit = new JButton("Submit");
+        form.add(new JLabel());
+        form.add(submit);
+
+        submit.addActionListener(e -> {
+            try (Connection conn = getConnection()) {
+                String placeholders = "?,".repeat(fields.length).replaceAll(",$", "");
+                String sql = "INSERT INTO " + table + " VALUES (NULL, " + placeholders + ")";
+                PreparedStatement ps = conn.prepareStatement(sql);
+                for (int i = 0; i < fields.length; i++) {
+                    ps.setString(i + 1, inputs[i].getText());
+                }
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(form, table + " entry added!");
+                form.dispose();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(form, "Error: " + ex.getMessage());
+            }
+        });
+
+        form.setLocationRelativeTo(null);
+        form.setVisible(true);
+    }
+
+    private void showAppointments() {
+        JTextArea area = new JTextArea(15, 40);
+        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+            for (String table : new String[]{"patients", "doctors", "appointments"}) {
+                area.append("\n" + table.toUpperCase() + ":\n");
+                ResultSet rs = stmt.executeQuery("SELECT * FROM " + table);
+                ResultSetMetaData md = rs.getMetaData();
+                while (rs.next()) {
+                    for (int i = 1; i <= md.getColumnCount(); i++) {
+                        area.append(md.getColumnName(i) + ": " + rs.getString(i) + "  ");
+                    }
+                    area.append("\n");
+                }
+            }
+        } catch (SQLException ex) {
+            area.setText("Error: " + ex.getMessage());
+        }
+        JOptionPane.showMessageDialog(this, new JScrollPane(area), "Database Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(HospitalManagementSystem::new);
+    }
+}
