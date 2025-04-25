@@ -203,3 +203,11 @@ public class HospitalManagementSystem extends JFrame {
         SwingUtilities.invokeLater(HospitalManagementSystem::new);
     }
 }
+
+module info
+module HospitalManagementSystem {
+    requires java.desktop;
+    requires java.sql;
+
+    exports user;
+}
